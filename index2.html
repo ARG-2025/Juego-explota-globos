@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Explota Globos - Por Nivel</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #87CEEB;
+            font-family: 'Arial', sans-serif;
+        }
+        #contador { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            font-size: 32px; 
+            color: black; 
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        #mensajeNivel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #FFD700;
+            text-shadow: 4px 4px 0px #000;
+            opacity: 0;
+            transition: opacity 0.5s;
+            text-align: center;
+            font-family: 'Minecraft', cursive;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+    </style>
+</head>
+<body>
+    <div id="contador">Globos: 0</div>
+    <div id="mensajeNivel"></div>
+    <canvas id="juego"></canvas>
+
+    <!-- Sonidos -->
+    <audio id="sonidoPop" src="https://assets.mixkit.co/sfx/preview/mixkit-balloon-pop-with-delay-2354.mp3" preload></audio>
+    <audio id="musica" loop src="https://assets.mixkit.co/music/preview/mixkit-happy-children-938.mp3" preload></audio>
+
+    <script>
+        // Configuración inicial
+        const canvas = document.getElementById("juego");
+        const ctx = canvas.getContext("2d");
+        const contadorElement = document.getElementById("contador");
+        const mensajeNivel = document.getElementById("mensajeNivel");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Variables del juego
+        let contador = 0;
+        let velocidad = 1.5;
+        let globos = [];
+        let nivel = 1;
+        let nubes = [];
+
+        // Inicializar nubes (fondo)
+        for (let i = 0; i < 5; i++) {
+            nubes.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height * 0.6,
+                width: 100 + Math.random() * 100,
+                speed: 0.2 + Math.random() * 0.5
+            });
+        }
+
+        // Dibujar nubes
+        function dibujarNubes() {
+            ctx.fillStyle = "#FFFFFF";
+            nubes.forEach(nube => {
+                ctx.beginPath();
+                ctx.arc(nube.x, nube.y, nube.width * 0.2, 0, Math.PI * 2);
+                ctx.arc(nube.x + nube.width * 0.3, nube.y - nube.width * 0.1, nube.width * 0.25, 0, Math.PI * 2);
+                ctx.arc(nube.x + nube.width * 0.6, nube.y, nube.width * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                nube.x += nube.speed;
+                if (nube.x > canvas.width + nube.width) nube.x = -nube.width;
+            });
+        }
+
+        // Dibujar globo con hilo
+        function dibujarGlobo(x, y, radio, color) {
+            // Cuerpo del globo
+            ctx.fillStyle = color;
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(x, y, radio, radio * 1.2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Hilo
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, y + radio * 1.2);
+            ctx.lineTo(x, y + radio * 1.8);
+            ctx.stroke();
+        }
+
+        // Crear globo nuevo
+        function crearGlobo() {
+            const radio = 30 + Math.random() * 10;
+            const colores = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF"];
+            const color = colores[Math.floor(Math.random() * colores.length)];
+
+            return {
+                x: Math.random() * (canvas.width - radio * 2) + radio,
+                y: Math.random() * (canvas.height * 0.7 - radio * 2) + radio,
+                dx: (Math.random() - 0.5) * velocidad,
+                dy: (Math.random() - 0.5) * velocidad,
+                radio: radio,
+                color: color
+            };
+        }
+
+        // Mostrar mensaje de nivel
+        function mostrarMensajeNivel() {
+            mensajeNivel.textContent = `¡Nivel ${nivel}! (Globos: ${nivel})`;
+            mensajeNivel.style.opacity = 1;
+            setTimeout(() => {
+                mensajeNivel.style.opacity = 0;
+            }, 2000);
+        }
+
+        // Inicializar globos (según nivel)
+        function iniciarGlobos() {
+            globos = [];
+            for (let i = 0; i < nivel; i++) {
+                globos.push(crearGlobo());
+            }
+        }
+
+        // Mostrar nivel inicial
+        iniciarGlobos();
+        mostrarMensajeNivel();
+
+        // Bucle principal
+        function actualizar() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Dibujar fondo y nubes
+            ctx.fillStyle = "#87CEEB";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            dibujarNubes();
+
+            // Mover y dibujar globos
+            globos.forEach(globo => {
+                globo.x += globo.dx;
+                globo.y += globo.dy;
+                
+                // Rebote en bordes
+                if (globo.x <= globo.radio || globo.x >= canvas.width - globo.radio) globo.dx *= -1;
+                if (globo.y <= globo.radio || globo.y >= canvas.height - globo.radio) globo.dy *= -1;
+                
+                dibujarGlobo(globo.x, globo.y, globo.radio, globo.color);
+            });
+
+            requestAnimationFrame(actualizar);
+        }
+
+        // Evento de clic
+        canvas.addEventListener("click", (e) => {
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+
+            globos.forEach((globo, index) => {
+                const distancia = Math.sqrt((mouseX - globo.x) ** 2 + (mouseY - globo.y) ** 2);
+                if (distancia < globo.radio * 1.2) {
+                    // Sonido de explosión
+                    const sonidoPop = document.getElementById("sonidoPop");
+                    sonidoPop.currentTime = 0;
+                    sonidoPop.play();
+
+                    // Eliminar globo y aumentar contador
+                    globos.splice(index, 1);
+                    contador++;
+                    contadorElement.textContent = `Globos: ${contador}`;
+
+                    // Aumentar velocidad cada 5 globos
+                    if (contador % 5 === 0) {
+                        velocidad *= 1.2;
+                    }
+
+                    // Subir de nivel cada 10 globos
+                    if (contador % 10 === 0) {
+                        nivel = Math.floor(contador / 10) + 1;
+                        iniciarGlobos(); // Reiniciar todos los globos
+                        mostrarMensajeNivel();
+                    } else {
+                        // Reponer solo 1 globo (para mantener el total = nivel)
+                        if (globos.length < nivel) {
+                            globos.push(crearGlobo());
+                        }
+                    }
+                }
+            });
+        });
+
+        // Iniciar música
+        const musica = document.getElementById("musica");
+        musica.volume = 0.3;
+        musica.play().catch(e => console.log("Click en la pantalla para activar sonido."));
+
+        // Iniciar juego
+        actualizar();
+
+        // Ajustar canvas al redimensionar ventana
+        window.addEventListener("resize", () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
